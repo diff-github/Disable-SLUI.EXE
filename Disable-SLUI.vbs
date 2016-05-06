@@ -10,8 +10,10 @@ usage = "" & vbCrLf & _
 "    cscript Disable-SLUI.vbs -enable  windir" & vbCrLf & _
 "" & vbCrLf & _
 "*NOTE*" & vbCrLf & _
-"    Use this in a running Windows is not encouraged, does not always work" & vbCrLf & _
-"    Boot into CMD Console using USB/DVD Windows Setup Disk is preferred" & vbCrLf & _
+"    1) Boot into CMD Console using USB/DVD Windows Setup Disk is preferred." & vbCrLf & _
+"    2) Use this in a running Windows is not encouraged:" & vbCrLf & _
+"            POTENTIAL RISK TO DAMAGE THE RUNNING SYSTEM" & vbCrLf & _
+"            DOES NOT ALWAYS WORK" & vbCrLf & _
 ""
 WScript.Echo usage
 End Function
@@ -19,12 +21,15 @@ Function fnExit()
     WScript.Quit
 End Function
 
-Dim param_action, param_windir
-If WScript.Arguments.Count = 2 Then
+Dim param_action, param_windir, param_force
+If WScript.Arguments.Count < 2 Then
+    param_action = "unknown"
+Else
     param_action = WScript.Arguments(0)
     param_windir = WScript.Arguments(1)
-Else
-    param_action = "unknown"
+End If
+If WScript.Arguments.Count > 2 Then
+    param_force = WScript.Arguments(2)
 End If
 
 Select Case(LCase(param_action))
@@ -40,20 +45,18 @@ Set fso = WScript.CreateObject("Scripting.FileSystemObject")
 Dim is_running_windows
 
 is_running_windows = fnIsRunningWindows(param_windir)
-If is_running_windows Then
-    WScript.Echo ""
-    WScript.Echo "***********"
-    WScript.Echo "* WARNING *" & "    Seems in a running Windows, DOES NOT ALWAYS WORK."
-    WScript.Echo "***********"
-    WScript.Echo ""
-
-    If WshShell.Run("net session", 0, True) <> 0 Then
-    WScript.Echo ""
-    WScript.Echo "***********"
-    WScript.Echo "*  ERROR  *" & "    NEED ADMINISTRATIVE(ELEVATED) PRIVILEGES."
-    WScript.Echo "***********"
-    WScript.Echo ""
+If is_running_windows And param_force <> "--FORCE" Then
+    fnUsage
     fnExit
+End If
+If is_running_windows Then
+    If WshShell.Run("net session", 0, True) <> 0 Then
+        WScript.Echo ""
+        WScript.Echo "***********"
+        WScript.Echo "*  ERROR  *" & "    NEED ADMINISTRATIVE(ELEVATED) PRIVILEGES."
+        WScript.Echo "***********"
+        WScript.Echo ""
+        fnExit
     End If
 End If
 
@@ -187,8 +190,14 @@ REM USERPROFILE=X:\windows\system32\config\systemprofile
     End If
 End Function
 Function fnMakeItAccessible(ByVal full_path)
+    If InStr(LCase(full_path), LCase("\winsxs\")) > 0 Then
+        fnMakeFileOrFolderAccessible fso.GetFile(full_path).ParentFolder.Path
+    End If
+    fnMakeFileOrFolderAccessible full_path
+End Function
+Function fnMakeFileOrFolderAccessible(ByVal full_path)
     If is_running_windows Then
         WshShell.Run ("TAKEOWN.EXE /F" & " " & """" & full_path & """" & " " & "/A"), 0, True
-        WshShell.Run ("ICACLS.EXE" & " " & """" & full_path & """" & " " & "/grant administrators:F"), 0, True
+        WshShell.Run ("ICACLS.EXE"     & " " & """" & full_path & """" & " " & "/grant administrators:F"), 0, True
     End If
 End Function

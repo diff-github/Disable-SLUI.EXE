@@ -8,5 +8,7 @@ Usage:
 
 *NOTE*
 
-    Use this in a running Windows is not encouraged, does not always work
-    Boot into CMD Console using USB/DVD Windows Setup Disk is preferred
+    1) Boot into CMD Console using USB/DVD Windows Setup Disk is preferred.
+    2) Use this in a running Windows is not encouraged:
+            POTENTIAL RISK TO DAMAGE THE RUNNING SYSTEM
+            DOES NOT ALWAYS WORK
