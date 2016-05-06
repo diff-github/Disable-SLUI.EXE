@@ -10,8 +10,8 @@ usage = "" & vbCrLf & _
 "    cscript Disable-SLUI.vbs -enable  windir" & vbCrLf & _
 "" & vbCrLf & _
 "*NOTE*" & vbCrLf & _
-"    Do not use this in a running Windows" & vbCrLf & _
-"    Boot into CMD Console using USB/DVD Windows Setup Disk" & vbCrLf & _
+"    Use this in a running Windows is not encouraged, does not always work" & vbCrLf & _
+"    Boot into CMD Console using USB/DVD Windows Setup Disk is preferred" & vbCrLf & _
 ""
 WScript.Echo usage
 End Function
@@ -34,32 +34,30 @@ Select Case(LCase(param_action))
         fnExit
 End Select
 
-REM USERNAME=SYSTEM
-REM USERPROFILE=X:\windows\system32\config\systemprofile
-Dim WshShell, WshEnv
-Dim env_username, env_profile
+Dim WshShell, fso
 Set WshShell = WScript.CreateObject("WScript.Shell")
-Set WshEnv = WshShell.Environment("PROCESS")
-env_username = WshEnv("USERNAME")
-env_profile  = WshEnv("USERPROFILE")
-If InStr(LCase(env_username), LCase("SYSTEM")) > 0 Or InStr(LCase(env_profile), LCase("\windows\system32\config\systemprofile")) Then
-    WScript.Echo ""
-    WScript.Echo "   USERNAME=" & env_username
-    WScript.Echo "USERPROFILE=" & env_profile
-    WScript.Echo ""
-Else
+Set fso = WScript.CreateObject("Scripting.FileSystemObject")
+Dim is_running_windows
+
+is_running_windows = fnIsRunningWindows(param_windir)
+If is_running_windows Then
     WScript.Echo ""
     WScript.Echo "***********"
-    WScript.Echo "* WARNING *" & "    Seems in a running Windows, MAY NOT WORK!"
+    WScript.Echo "* WARNING *" & "    Seems in a running Windows, DOES NOT ALWAYS WORK."
     WScript.Echo "***********"
     WScript.Echo ""
-    WScript.Echo "   USERNAME=" & env_username
-    WScript.Echo "USERPROFILE=" & env_profile
+
+    If WshShell.Run("net session", 0, True) <> 0 Then
     WScript.Echo ""
+    WScript.Echo "***********"
+    WScript.Echo "*  ERROR  *" & "    NEED ADMINISTRATIVE(ELEVATED) PRIVILEGES."
+    WScript.Echo "***********"
+    WScript.Echo ""
+    fnExit
+    End If
 End If
 
-Dim fso, arrSLUI, slui
-Set fso = WScript.CreateObject("Scripting.FileSystemObject")
+Dim arrSLUI, slui
 arrSLUI = fnListAllSLUIFiles(param_windir)
 For Each slui In arrSLUI
     WScript.Echo slui
@@ -135,6 +133,7 @@ Dim file
         If InStr(file.Name, ".disabled") > 0 Then
             WScript.Echo "    " & "already disabled"
         Else
+            fnMakeItAccessible full_path
             file.Move file.ParentFolder.Path & "\" & file.Name & ".disabled"
             If Err.Number = 0 Then
                 WScript.Echo "    " & "disabled"
@@ -156,6 +155,7 @@ Dim file
         If InStr(file.Name, ".disabled") = 0 Then
             WScript.Echo "    " & "already enabled"
         Else
+            fnMakeItAccessible full_path
             file.Move file.ParentFolder.Path & "\" & Replace(file.Name, ".disabled", "")
             If Err.Number = 0 Then
                 WScript.Echo "    " & "enabled"
@@ -166,5 +166,29 @@ Dim file
         End If
     Else
         Err.Clear
+    End If
+End Function
+Function fnIsRunningWindows(full_path)
+Dim WshEnv, env_windir, env_username, env_profile
+REM USERNAME=SYSTEM
+REM USERPROFILE=X:\windows\system32\config\systemprofile
+
+    Set WshEnv   = WshShell.Environment("PROCESS")
+    env_windir   = WshEnv("WINDIR")
+    env_username = WshEnv("USERNAME")
+    env_profile  = WshEnv("USERPROFILE")
+
+    If InStr(LCase(full_path), LCase(env_windir)) > 0 Then
+        fnIsRunningWindows = True
+    ElseIf InStr(LCase(env_username), LCase("SYSTEM")) > 0 Or InStr(LCase(env_profile), LCase("\windows\system32\config\systemprofile")) > 0 Then
+        fnIsRunningWindows = False
+    Else
+        fnIsRunningWindows = True
+    End If
+End Function
+Function fnMakeItAccessible(ByVal full_path)
+    If is_running_windows Then
+        WshShell.Run ("TAKEOWN.EXE /F" & " " & """" & full_path & """" & " " & "/A"), 0, True
+        WshShell.Run ("ICACLS.EXE" & " " & """" & full_path & """" & " " & "/grant administrators:F"), 0, True
     End If
 End Function

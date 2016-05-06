@@ -1,4 +1,4 @@
-# Disable-SLUI.EXE
+# Disable SLUI.EXE
 
 Usage:
 
@@ -8,5 +8,5 @@ Usage:
 
 *NOTE*
 
-    Do not use this in a running Windows
-    Boot into CMD Console using USB/DVD Windows Setup Disk
+    Use this in a running Windows is not encouraged, does not always work
+    Boot into CMD Console using USB/DVD Windows Setup Disk is preferred
